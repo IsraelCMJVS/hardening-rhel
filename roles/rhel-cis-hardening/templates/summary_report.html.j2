@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Summary Report - {{ inventory_hostname }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+    h1, h2 { color: #1f4e79; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+    th, td { border: 1px solid #cfcfcf; padding: 8px; text-align: left; vertical-align: top; }
+    th { background-color: #eaf2f8; }
+    .good { background-color: #eaf7ea; font-weight: bold; }
+    .medium { background-color: #fff7e6; font-weight: bold; }
+    .bad { background-color: #fdecec; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Resumen ejecutivo de hardening</h1>
+
+  <h2>Datos del host</h2>
+  <table>
+    <tr><th>Hostname</th><td>{{ inventory_hostname }}</td></tr>
+    <tr><th>IP</th><td>{{ hardening_host_ip }}</td></tr>
+    <tr><th>Sistema operativo</th><td>{{ hardening_os_full }}</td></tr>
+    <tr><th>Perfil SCAP</th><td>{{ hardening_scap_profile }}</td></tr>
+    <tr><th>Datastream</th><td>{{ hardening_scap_datastream }}</td></tr>
+    <tr><th>Execution ID</th><td>{{ hardening_execution_id }}</td></tr>
+    <tr><th>Umbral mínimo</th><td>{{ hardening_minimum_score }}%</td></tr>
+    <tr>
+      <th>Clasificación final</th>
+      <td class="{% if 'satisfactorio' in hardening_final_status|lower %}good{% elif 'parcial' in hardening_final_status|lower %}medium{% else %}bad{% endif %}">
+        {{ hardening_final_status }}
+      </td>
+    </tr>
+  </table>
+
+  <h2>Comparativo pre / post</h2>
+  <table>
+    <tr>
+      <th>Métrica</th>
+      <th>Pre-scan</th>
+      <th>Post-scan</th>
+    </tr>
+    <tr><td>Score</td><td>{{ pre_scan_data.score | default('N/A') }}</td><td>{{ post_scan_data.score | default('N/A') if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Pass</td><td>{{ pre_scan_data.counts.pass | default(0) }}</td><td>{{ post_scan_data.counts.pass | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Fail</td><td>{{ pre_scan_data.counts.fail | default(0) }}</td><td>{{ post_scan_data.counts.fail | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Error</td><td>{{ pre_scan_data.counts.error | default(0) }}</td><td>{{ post_scan_data.counts.error | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Unknown</td><td>{{ pre_scan_data.counts.unknown | default(0) }}</td><td>{{ post_scan_data.counts.unknown | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Not Checked</td><td>{{ pre_scan_data.counts.notchecked | default(0) }}</td><td>{{ post_scan_data.counts.notchecked | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Not Selected</td><td>{{ pre_scan_data.counts.notselected | default(0) }}</td><td>{{ post_scan_data.counts.notselected | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Informational</td><td>{{ pre_scan_data.counts.informational | default(0) }}</td><td>{{ post_scan_data.counts.informational | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Manual</td><td>{{ pre_scan_data.counts.manual | default(0) }}</td><td>{{ post_scan_data.counts.manual | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Not Applicable</td><td>{{ pre_scan_data.counts.notapplicable | default(0) }}</td><td>{{ post_scan_data.counts.notapplicable | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><td>Fixed</td><td>{{ pre_scan_data.counts.fixed | default(0) }}</td><td>{{ post_scan_data.counts.fixed | default(0) if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+  </table>
+
+  <h2>Artefactos generados</h2>
+  <table>
+    <tr><th>Reporte HTML pre-scan</th><td>{{ hardening_execution_workdir }}/{{ hardening_pre_scan_html }}</td></tr>
+    <tr><th>Reporte XML pre-scan</th><td>{{ hardening_execution_workdir }}/{{ hardening_pre_scan_xml }}</td></tr>
+    <tr><th>Reporte HTML remediación OpenSCAP</th><td>{{ hardening_execution_workdir }}/{{ hardening_remediation_html if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><th>Reporte XML remediación</th><td>{{ hardening_execution_workdir }}/{{ hardening_remediation_xml if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><th>Reporte HTML post-scan</th><td>{{ hardening_execution_workdir }}/{{ hardening_post_scan_html if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><th>Reporte XML post-scan</th><td>{{ hardening_execution_workdir }}/{{ hardening_post_scan_xml if hardening_mode == 'scan_and_remediate' else 'No aplica' }}</td></tr>
+    <tr><th>Reporte HTML remediación custom</th><td>{{ hardening_execution_workdir }}/{{ hardening_remediation_log_html }}</td></tr>
+  </table>
+
+  {% if hardening_mode == 'scan_and_remediate' and post_scan_data.rules is defined %}
+  <h2>Top hallazgos fallidos posteriores</h2>
+  <table>
+    <tr>
+      <th>Rule ID</th>
+      <th>Severity</th>
+      <th>Título</th>
+      <th>Resultado</th>
+    </tr>
+    {% for rule in post_scan_data.rules if rule.result == 'fail' %}
+    <tr>
+      <td>{{ rule.id }}</td>
+      <td>{{ rule.severity | default('') }}</td>
+      <td>{{ rule.title | default('') }}</td>
+      <td>{{ rule.result }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <h2>Hallazgos relevantes previos</h2>
+  <table>
+    <tr>
+      <th>Rule ID</th>
+      <th>Severity</th>
+      <th>Título</th>
+      <th>Resultado</th>
+    </tr>
+    {% for rule in pre_scan_data.rules if rule.result == 'fail' %}
+    <tr>
+      <td>{{ rule.id }}</td>
+      <td>{{ rule.severity | default('') }}</td>
+      <td>{{ rule.title | default('') }}</td>
+      <td>{{ rule.result }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,11 @@
+---
+- name: Execute pre hardening scan
+  ansible.builtin.command: >
+    oscap xccdf eval
+    --profile {{ hardening_scap_profile }}
+    --results {{ hardening_execution_workdir }}/{{ hardening_pre_scan_xml }}
+    --report {{ hardening_execution_workdir }}/{{ hardening_pre_scan_html }}
+    {{ hardening_scap_datastream }}
+  register: pre_scan_result
+  changed_when: false
+  failed_when: pre_scan_result.rc not in [0, 2]

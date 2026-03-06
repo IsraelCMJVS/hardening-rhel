@@ -1,0 +1,22 @@
+---
+- name: Set remediation start timestamp
+  ansible.builtin.set_fact:
+    hardening_remediation_start: "{{ ansible_date_time.iso8601 }}"
+
+- name: Execute remediation
+  ansible.builtin.command: >
+    oscap xccdf eval
+    --remediate
+    --profile {{ hardening_scap_profile }}
+    --results {{ hardening_execution_workdir }}/{{ hardening_remediation_xml }}
+    --report {{ hardening_execution_workdir }}/{{ hardening_remediation_html }}
+    {{ hardening_scap_datastream }}
+  register: remediation_result
+  failed_when: remediation_result.rc not in [0, 2]
+
+- name: Refresh facts after remediation
+  ansible.builtin.setup:
+
+- name: Set remediation end timestamp
+  ansible.builtin.set_fact:
+    hardening_remediation_end: "{{ ansible_date_time.iso8601 }}"

@@ -1,0 +1,35 @@
+---
+- name: Execute prechecks
+  ansible.builtin.include_tasks: prechecks.yml
+
+- name: Install prerequisites
+  ansible.builtin.include_tasks: install_prereqs.yml
+  when: hardening_install_prereqs | bool
+
+- name: Run pre-scan
+  ansible.builtin.include_tasks: pre_scan.yml
+
+- name: Parse pre-scan results
+  ansible.builtin.include_tasks: parse_pre_scan.yml
+
+- name: Execute remediation
+  ansible.builtin.include_tasks: remediate.yml
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Run post-scan
+  ansible.builtin.include_tasks: post_scan.yml
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Parse post-scan results
+  ansible.builtin.include_tasks: parse_post_scan.yml
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Generate custom reports
+  ansible.builtin.include_tasks: generate_reports.yml
+
+- name: Collect reports to bastion
+  ansible.builtin.include_tasks: collect_to_bastion.yml
+  when: hardening_copy_reports_to_bastion | bool
+
+- name: Cleanup temporary data and packages
+  ansible.builtin.include_tasks: cleanup.yml

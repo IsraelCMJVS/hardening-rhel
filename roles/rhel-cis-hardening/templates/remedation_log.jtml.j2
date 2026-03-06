@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Remediation Log - {{ inventory_hostname }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+    h1, h2 { color: #1f4e79; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 24px; }
+    th, td { border: 1px solid #cfcfcf; padding: 8px; text-align: left; vertical-align: top; }
+    th { background-color: #eaf2f8; }
+    .mono { font-family: Consolas, monospace; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Reporte de remediación de hardening</h1>
+
+  <h2>Datos generales</h2>
+  <table>
+    <tr><th>Hostname</th><td>{{ inventory_hostname }}</td></tr>
+    <tr><th>IP</th><td>{{ hardening_host_ip }}</td></tr>
+    <tr><th>Sistema operativo</th><td>{{ hardening_os_full }}</td></tr>
+    <tr><th>Perfil SCAP</th><td>{{ hardening_scap_profile }}</td></tr>
+    <tr><th>Datastream</th><td>{{ hardening_scap_datastream }}</td></tr>
+    <tr><th>Modo de ejecución</th><td>{{ hardening_mode }}</td></tr>
+    <tr><th>Inicio remediación</th><td>{{ hardening_remediation_start | default('No aplica') }}</td></tr>
+    <tr><th>Fin remediación</th><td>{{ hardening_remediation_end | default('No aplica') }}</td></tr>
+    <tr><th>RC comando remediación</th><td>{{ remediation_result.rc | default('No aplica') }}</td></tr>
+    <tr><th>Execution ID</th><td>{{ hardening_execution_id }}</td></tr>
+  </table>
+
+  <h2>Resumen técnico</h2>
+  <table>
+    <tr><th>XML remediación</th><td>{{ hardening_execution_workdir }}/{{ hardening_remediation_xml }}</td></tr>
+    <tr><th>HTML remediación OpenSCAP</th><td>{{ hardening_execution_workdir }}/{{ hardening_remediation_html }}</td></tr>
+    <tr><th>HTML summary</th><td>{{ hardening_execution_workdir }}/{{ hardening_summary_report_html }}</td></tr>
+  </table>
+
+  <h2>Salida estándar</h2>
+  <table>
+    <tr><th>STDOUT</th></tr>
+    <tr><td class="mono">{{ remediation_result.stdout | default('Sin salida estándar') }}</td></tr>
+  </table>
+
+  <h2>Salida de error</h2>
+  <table>
+    <tr><th>STDERR</th></tr>
+    <tr><td class="mono">{{ remediation_result.stderr | default('Sin errores reportados') }}</td></tr>
+  </table>
+</body>
+</html>

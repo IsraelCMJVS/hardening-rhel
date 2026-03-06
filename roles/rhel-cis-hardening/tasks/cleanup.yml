@@ -1,0 +1,18 @@
+---
+- name: Remove prerequisite packages
+  ansible.builtin.package:
+    name: "{{ hardening_required_packages }}"
+    state: absent
+  when: hardening_remove_prereqs_at_end | bool
+
+- name: Remove remote execution directory
+  ansible.builtin.file:
+    path: "{{ hardening_execution_workdir }}"
+    state: absent
+  when: not hardening_keep_remote_artifacts_after_copy | bool
+
+- name: Remove local staging directory on execution node
+  ansible.builtin.file:
+    path: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/"
+    state: absent
+  when: not hardening_keep_remote_artifacts_after_copy | bool

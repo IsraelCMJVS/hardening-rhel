@@ -1,0 +1,54 @@
+---
+- name: Gather facts
+  ansible.builtin.setup:
+
+- name: Validate supported operating system
+  ansible.builtin.fail:
+    msg: "Este role solo soporta Red Hat Enterprise Linux 8 y 9."
+  when: ansible_distribution != "RedHat" or ansible_distribution_major_version not in ["8", "9"]
+
+- name: Set SCAP datastream for RHEL 8
+  ansible.builtin.set_fact:
+    hardening_scap_datastream: "{{ hardening_scap_datastream_rhel8 }}"
+  when: ansible_distribution_major_version == "8"
+
+- name: Set SCAP datastream for RHEL 9
+  ansible.builtin.set_fact:
+    hardening_scap_datastream: "{{ hardening_scap_datastream_rhel9 }}"
+  when: ansible_distribution_major_version == "9"
+
+- name: Validate selected SCAP datastream exists
+  ansible.builtin.stat:
+    path: "{{ hardening_scap_datastream }}"
+  register: hardening_scap_datastream_stat
+
+- name: Fail if SCAP datastream does not exist
+  ansible.builtin.fail:
+    msg: "No existe el datastream SCAP esperado: {{ hardening_scap_datastream }}"
+  when: not hardening_scap_datastream_stat.stat.exists
+
+- name: Create remote base working directory
+  ansible.builtin.file:
+    path: "{{ hardening_remote_workdir }}"
+    state: directory
+    mode: "0755"
+
+- name: Build execution id
+  ansible.builtin.set_fact:
+    hardening_execution_id: >-
+      {{ hardening_execution_prefix }}_{{ inventory_hostname }}_{{ ansible_date_time.year }}{{ '%02d' | format(ansible_date_time.month | int) }}{{ '%02d' | format(ansible_date_time.day | int) }}_{{ '%02d' | format(ansible_date_time.hour | int) }}{{ '%02d' | format(ansible_date_time.minute | int) }}{{ '%02d' | format(ansible_date_time.second | int) }}
+
+- name: Create remote execution directory
+  ansible.builtin.file:
+    path: "{{ hardening_remote_workdir }}/{{ hardening_execution_id }}"
+    state: directory
+    mode: "0755"
+
+- name: Set execution workdir fact
+  ansible.builtin.set_fact:
+    hardening_execution_workdir: "{{ hardening_remote_workdir }}/{{ hardening_execution_id }}"
+
+- name: Set host metadata facts
+  ansible.builtin.set_fact:
+    hardening_host_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0] | default('N/A')) }}"
+    hardening_os_full: "{{ ansible_distribution }} {{ ansible_distribution_version }}"

@@ -1,0 +1,11 @@
+---
+- name: Install OpenSCAP required packages
+  ansible.builtin.package:
+    name: "{{ hardening_required_packages }}"
+    state: present
+
+- name: Copy parser script to remote host
+  ansible.builtin.copy:
+    src: "{{ hardening_parser_script_name }}"
+    dest: "{{ hardening_execution_workdir }}/{{ hardening_parser_script_name }}"
+    mode: "0755"

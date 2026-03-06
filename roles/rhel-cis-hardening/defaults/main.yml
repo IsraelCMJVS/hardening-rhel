@@ -1,0 +1,84 @@
+---
+# =========================
+# Operation mode
+# =========================
+hardening_mode: scan_and_remediate
+# valid values:
+# - scan_only
+# - scan_and_remediate
+
+# =========================
+# Compliance behavior
+# =========================
+hardening_minimum_score: 80
+hardening_fail_job_on_low_score: false
+hardening_allow_documented_exceptions: true
+
+# =========================
+# Prerequisites
+# =========================
+hardening_install_prereqs: true
+hardening_remove_prereqs_at_end: true
+
+hardening_required_packages:
+  - openscap
+  - openscap-scanner
+  - scap-security-guide
+
+# =========================
+# Paths
+# =========================
+hardening_remote_workdir: /tmp/hardening_rhel
+hardening_keep_remote_artifacts_after_copy: false
+
+# =========================
+# Report generation
+# =========================
+hardening_generate_summary_report: true
+hardening_copy_reports_to_bastion: true
+
+# =========================
+# SCAP Profile
+# =========================
+hardening_scap_profile: xccdf_org.ssgproject.content_profile_cis_server_l1
+
+# =========================
+# Datastreams by OS version
+# =========================
+hardening_scap_datastream_rhel8: /usr/share/xml/scap/ssg/content/ssg-rhel8-ds.xml
+hardening_scap_datastream_rhel9: /usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml
+
+# =========================
+# Native OpenSCAP reports
+# =========================
+hardening_pre_scan_xml: cis-pre-results.xml
+hardening_pre_scan_html: cis-pre-report.html
+
+hardening_post_scan_xml: cis-post-results.xml
+hardening_post_scan_html: cis-post-report.html
+
+hardening_remediation_xml: remediation-results.xml
+hardening_remediation_html: remediation-report.html
+
+# =========================
+# Custom reports
+# =========================
+hardening_remediation_log_html: remediation_log.html
+hardening_summary_report_html: summary_report.html
+
+# =========================
+# Parser script
+# =========================
+hardening_parser_script_name: parse_oscap_results.py
+
+# =========================
+# Execution metadata
+# =========================
+hardening_execution_prefix: hardening
+
+# Bastion target
+hardening_bastion_host: invq-ts-ansible
+hardening_bastion_base_dir: /reportes_ansible/hardening_rhel
+
+# Local staging on AAP execution node
+hardening_controller_stage_dir: /tmp/hardening_reports_stage

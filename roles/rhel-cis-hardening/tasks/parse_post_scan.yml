@@ -1,0 +1,25 @@
+---
+- name: Parse post-scan XML results
+  ansible.builtin.command: >
+    {{ ansible_python.executable | default('/usr/bin/python3') }}
+    {{ hardening_execution_workdir }}/{{ hardening_parser_script_name }}
+    {{ hardening_execution_workdir }}/{{ hardening_post_scan_xml }}
+  register: post_scan_parsed_raw
+  changed_when: false
+
+- name: Validate post-scan parser output
+  ansible.builtin.assert:
+    that:
+      - post_scan_parsed_raw.stdout is defined
+      - post_scan_parsed_raw.stdout | length > 0
+    fail_msg: "No se pudo obtener salida del parseo del post-scan XML."
+
+- name: Set parsed post-scan facts
+  ansible.builtin.set_fact:
+    post_scan_data: "{{ post_scan_parsed_raw.stdout | from_json }}"
+
+- name: Validate parsed post-scan data
+  ansible.builtin.assert:
+    that:
+      - post_scan_data.error is not defined
+    fail_msg: "Error al parsear XML de post-scan: {{ post_scan_data.error | default('desconocido') }}"

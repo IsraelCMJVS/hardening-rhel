@@ -1,0 +1,70 @@
+---
+- name: Define effective final score
+  ansible.builtin.set_fact:
+    hardening_effective_final_score: >-
+      {% if hardening_mode == 'scan_and_remediate' %}
+      {{ post_scan_data.score | default(0) }}
+      {% else %}
+      {{ pre_scan_data.score | default(0) }}
+      {% endif %}
+
+- name: Define remaining fail count
+  ansible.builtin.set_fact:
+    hardening_effective_fail_count: >-
+      {% if hardening_mode == 'scan_and_remediate' %}
+      {{ post_scan_data.counts.fail | default(0) }}
+      {% else %}
+      {{ pre_scan_data.counts.fail | default(0) }}
+      {% endif %}
+
+- name: Define remaining manual and unknown counts
+  ansible.builtin.set_fact:
+    hardening_effective_manual_count: >-
+      {% if hardening_mode == 'scan_and_remediate' %}
+      {{ post_scan_data.counts.manual | default(0) }}
+      {% else %}
+      {{ pre_scan_data.counts.manual | default(0) }}
+      {% endif %}
+    hardening_effective_unknown_count: >-
+      {% if hardening_mode == 'scan_and_remediate' %}
+      {{ post_scan_data.counts.unknown | default(0) }}
+      {% else %}
+      {{ pre_scan_data.counts.unknown | default(0) }}
+      {% endif %}
+
+- name: Define final compliance status
+  ansible.builtin.set_fact:
+    hardening_final_status: >-
+      {% set score = hardening_effective_final_score | float %}
+      {% set fails = hardening_effective_fail_count | int %}
+      {% set manuals = hardening_effective_manual_count | int %}
+      {% set unknowns = hardening_effective_unknown_count | int %}
+      {% if score >= (hardening_minimum_score | float) and fails == 0 %}
+      Cumplimiento satisfactorio
+      {% elif hardening_allow_documented_exceptions | bool and (manuals > 0 or unknowns > 0 or fails > 0) %}
+      Cumplimiento parcial con observaciones
+      {% else %}
+      Incumplimiento
+      {% endif %}
+
+- name: Generate remediation log HTML
+  ansible.builtin.template:
+    src: remediation_log.html.j2
+    dest: "{{ hardening_execution_workdir }}/{{ hardening_remediation_log_html }}"
+
+- name: Generate summary report HTML
+  ansible.builtin.template:
+    src: summary_report.html.j2
+    dest: "{{ hardening_execution_workdir }}/{{ hardening_summary_report_html }}"
+  when: hardening_generate_summary_report | bool
+
+- name: Fail role if configured and compliance score is below threshold
+  ansible.builtin.fail:
+    msg: >-
+      El host {{ inventory_hostname }} no alcanzó el umbral mínimo de cumplimiento.
+      Score final: {{ hardening_effective_final_score }}%.
+      Umbral requerido: {{ hardening_minimum_score }}%.
+      Estado final: {{ hardening_final_status }}.
+  when:
+    - hardening_fail_job_on_low_score | bool
+    - (hardening_effective_final_score | float) < (hardening_minimum_score | float)

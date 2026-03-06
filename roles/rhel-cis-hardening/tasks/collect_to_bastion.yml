@@ -1,0 +1,116 @@
+---
+- name: Validate rsync is available on execution node
+  ansible.builtin.command: rsync --version
+  register: hardening_rsync_check
+  changed_when: false
+
+- name: Fail if rsync is not available on execution node
+  ansible.builtin.fail:
+    msg: "rsync no está disponible en el execution node de AAP."
+  when: hardening_rsync_check.rc != 0
+  
+- name: Create local staging directories on execution node
+  ansible.builtin.file:
+    path: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/{{ item }}/{{ hardening_execution_id }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - pre
+    - remediation
+    - post
+    - summary
+
+- name: Fetch pre-scan XML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_pre_scan_xml }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/"
+    flat: true
+
+- name: Fetch pre-scan HTML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_pre_scan_html }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/"
+    flat: true
+
+- name: Fetch remediation XML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_xml }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch remediation OpenSCAP HTML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_html }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch custom remediation HTML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_log_html }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/"
+    flat: true
+
+- name: Fetch post-scan XML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_post_scan_xml }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch post-scan HTML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_post_scan_html }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch summary HTML to execution node staging
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_summary_report_html }}"
+    dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/"
+    flat: true
+  when: hardening_generate_summary_report | bool
+
+- name: Ensure destination directories exist on bastion
+  ansible.builtin.file:
+    path: "{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/{{ item }}/{{ hardening_execution_id }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ hardening_bastion_host }}"
+  loop:
+    - pre
+    - remediation
+    - post
+    - summary
+
+- name: Copy pre directory from execution node to bastion
+  ansible.builtin.command: >
+    rsync -av
+    {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/
+    {{ hardening_bastion_host }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/
+  changed_when: true
+
+- name: Copy remediation directory from execution node to bastion
+  ansible.builtin.command: >
+    rsync -av
+    {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/
+    {{ hardening_bastion_host }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/
+  changed_when: true
+
+- name: Copy post directory from execution node to bastion
+  ansible.builtin.command: >
+    rsync -av
+    {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/
+    {{ hardening_bastion_host }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/
+  changed_when: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Copy summary directory from execution node to bastion
+  ansible.builtin.command: >
+    rsync -av
+    {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/
+    {{ hardening_bastion_host }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/
+  changed_when: true
+  when: hardening_generate_summary_report | bool

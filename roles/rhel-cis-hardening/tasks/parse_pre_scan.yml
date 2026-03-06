@@ -1,0 +1,25 @@
+---
+- name: Parse pre-scan XML results
+  ansible.builtin.command: >
+    {{ ansible_python.executable | default('/usr/bin/python3') }}
+    {{ hardening_execution_workdir }}/{{ hardening_parser_script_name }}
+    {{ hardening_execution_workdir }}/{{ hardening_pre_scan_xml }}
+  register: pre_scan_parsed_raw
+  changed_when: false
+
+- name: Validate pre-scan parser output
+  ansible.builtin.assert:
+    that:
+      - pre_scan_parsed_raw.stdout is defined
+      - pre_scan_parsed_raw.stdout | length > 0
+    fail_msg: "No se pudo obtener salida del parseo del pre-scan XML."
+
+- name: Set parsed pre-scan facts
+  ansible.builtin.set_fact:
+    pre_scan_data: "{{ pre_scan_parsed_raw.stdout | from_json }}"
+
+- name: Validate parsed pre-scan data
+  ansible.builtin.assert:
+    that:
+      - pre_scan_data.error is not defined
+    fail_msg: "Error al parsear XML de pre-scan: {{ pre_scan_data.error | default('desconocido') }}"
