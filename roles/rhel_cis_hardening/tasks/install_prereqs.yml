@@ -9,3 +9,13 @@
     src: "{{ hardening_parser_script_name }}"
     dest: "{{ hardening_execution_workdir }}/{{ hardening_parser_script_name }}"
     mode: "0755"
+
+- name: Validate selected SCAP datastream exists
+  ansible.builtin.stat:
+    path: "{{ hardening_scap_datastream }}"
+  register: hardening_scap_datastream_stat
+
+- name: Fail if SCAP datastream does not exist
+  ansible.builtin.fail:
+    msg: "No existe el datastream SCAP esperado: {{ hardening_scap_datastream }}"
+  when: not hardening_scap_datastream_stat.stat.exists

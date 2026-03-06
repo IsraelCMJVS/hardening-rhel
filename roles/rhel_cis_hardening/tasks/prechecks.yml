@@ -17,16 +17,6 @@
     hardening_scap_datastream: "{{ hardening_scap_datastream_rhel9 }}"
   when: ansible_distribution_major_version == "9"
 
-- name: Validate selected SCAP datastream exists
-  ansible.builtin.stat:
-    path: "{{ hardening_scap_datastream }}"
-  register: hardening_scap_datastream_stat
-
-- name: Fail if SCAP datastream does not exist
-  ansible.builtin.fail:
-    msg: "No existe el datastream SCAP esperado: {{ hardening_scap_datastream }}"
-  when: not hardening_scap_datastream_stat.stat.exists
-
 - name: Create remote base working directory
   ansible.builtin.file:
     path: "{{ hardening_remote_workdir }}"
