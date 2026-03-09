@@ -1,0 +1,77 @@
+---
+- name: Ensure runner artifacts base directory exists
+  ansible.builtin.file:
+    path: /runner/artifacts/hardening_reports
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+
+- name: Ensure runner artifacts host directory exists
+  ansible.builtin.file:
+    path: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+
+- name: Fetch pre-scan XML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_pre_scan_xml }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+
+- name: Fetch pre-scan HTML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_pre_scan_html }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+
+- name: Fetch summary HTML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_summary_report_html }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_generate_summary_report | bool
+
+- name: Fetch remediation custom HTML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_log_html }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch remediation XML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_xml }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch remediation OpenSCAP HTML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_html }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch post-scan XML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_post_scan_xml }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Fetch post-scan HTML to runner artifacts
+  ansible.builtin.fetch:
+    src: "{{ hardening_execution_workdir }}/{{ hardening_post_scan_html }}"
+    dest: "/runner/artifacts/hardening_reports/{{ inventory_hostname }}/"
+    flat: true
+  when: hardening_mode == "scan_and_remediate"
+
+- name: Package reports for download from AAP UI
+  ansible.builtin.command: >
+    tar -czf /runner/artifacts/hardening_reports.tar.gz
+    -C /runner/artifacts
+    hardening_reports
+  delegate_to: localhost
+  run_once: true
+  changed_when: true
