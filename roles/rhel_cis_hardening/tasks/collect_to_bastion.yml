@@ -4,7 +4,7 @@
     hardening_bastion_rsync_target: >-
       {{ hostvars[hardening_bastion_host].ansible_host | default(hardening_bastion_host) }}
 
-- name: Create local staging directories on execution node
+- name: Ensure local staging directories exist on execution node
   ansible.builtin.file:
     path: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/{{ item }}/{{ hardening_execution_id }}"
     state: directory
@@ -41,11 +41,12 @@
     flat: true
   when: hardening_mode == "scan_and_remediate"
 
-- name: Fetch custom remediation HTML to execution node staging
+- name: Fetch remediation custom HTML to execution node staging
   ansible.builtin.fetch:
     src: "{{ hardening_execution_workdir }}/{{ hardening_remediation_log_html }}"
     dest: "{{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/"
     flat: true
+  when: hardening_mode == "scan_and_remediate"
 
 - name: Fetch post-scan XML to execution node staging
   ansible.builtin.fetch:
@@ -68,6 +69,13 @@
     flat: true
   when: hardening_generate_summary_report | bool
 
+- name: Validate delegated SSH connectivity to bastion
+  ansible.builtin.command: whoami
+  delegate_to: "{{ hardening_bastion_host }}"
+  become: false
+  register: bastion_delegate_test
+  changed_when: false
+
 - name: Ensure destination directories exist on bastion
   ansible.builtin.file:
     path: "{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/{{ item }}/{{ hardening_execution_id }}"
@@ -87,7 +95,7 @@
     -o StrictHostKeyChecking=no
     -o UserKnownHostsFile=/dev/null
     -o ConnectTimeout=10
-    {{ hardening_bastion_rsync_target }}
+    {{ hardening_bastion_ssh_user }}@{{ hardening_bastion_rsync_target }}
     "echo SSH_OK"
   register: bastion_ssh_check
   changed_when: false
@@ -98,7 +106,7 @@
     rsync -av --timeout=30
     -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
     {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/
-    {{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/
+    {{ hardening_bastion_ssh_user }}@{{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/pre/{{ hardening_execution_id }}/
   register: rsync_pre_result
   changed_when: rsync_pre_result.rc == 0
   failed_when: rsync_pre_result.rc != 0
@@ -108,17 +116,18 @@
     rsync -av --timeout=30
     -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
     {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/
-    {{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/
+    {{ hardening_bastion_ssh_user }}@{{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/remediation/{{ hardening_execution_id }}/
   register: rsync_remediation_result
   changed_when: rsync_remediation_result.rc == 0
   failed_when: rsync_remediation_result.rc != 0
+  when: hardening_mode == "scan_and_remediate"
 
 - name: Copy post directory from execution node to bastion
   ansible.builtin.command: >
     rsync -av --timeout=30
     -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
     {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/
-    {{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/
+    {{ hardening_bastion_ssh_user }}@{{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/post/{{ hardening_execution_id }}/
   register: rsync_post_result
   changed_when: rsync_post_result.rc == 0
   failed_when: rsync_post_result.rc != 0
@@ -129,7 +138,7 @@
     rsync -av --timeout=30
     -e "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10"
     {{ hardening_controller_stage_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/
-    {{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/
+    {{ hardening_bastion_ssh_user }}@{{ hardening_bastion_rsync_target }}:{{ hardening_bastion_base_dir }}/rhel{{ ansible_distribution_major_version }}/summary/{{ hardening_execution_id }}/
   register: rsync_summary_result
   changed_when: rsync_summary_result.rc == 0
   failed_when: rsync_summary_result.rc != 0
