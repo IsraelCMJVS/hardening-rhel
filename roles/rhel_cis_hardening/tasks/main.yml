@@ -31,8 +31,8 @@
   ansible.builtin.include_tasks: collect_to_bastion.yml
   when: hardening_copy_reports_to_bastion | bool
 
-- name: Export reports to runner artifacts
-  ansible.builtin.include_tasks: export_runner_artifacts.yml
+# - name: Export reports to runner artifacts
+#   ansible.builtin.include_tasks: export_runner_artifacts.yml
 
 - name: Cleanup temporary data and packages
   ansible.builtin.include_tasks: cleanup.yml
