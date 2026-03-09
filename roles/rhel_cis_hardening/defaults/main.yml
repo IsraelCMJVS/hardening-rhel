@@ -79,7 +79,7 @@ hardening_execution_prefix: hardening
 # Bastion target
 hardening_bastion_host: invq-ts-ansible
 hardening_bastion_ssh_user: ec2-user
-hardening_bastion_base_dir: /reportes_ansible/hardening_rhel
+hardening_bastion_base_dir: /home/ec2-user/hardening_rhel
 
 # Local staging on AAP execution node
 hardening_controller_stage_dir: /tmp/hardening_reports_stage
