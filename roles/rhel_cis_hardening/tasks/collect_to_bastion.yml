@@ -74,6 +74,7 @@
     state: directory
     mode: "0755"
   delegate_to: "{{ hardening_bastion_host }}"
+  become: false
   loop:
     - pre
     - remediation
